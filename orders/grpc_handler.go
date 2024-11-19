@@ -1,4 +1,4 @@
-package orders
+package main
 
 import (
 	pb "common/api"
@@ -12,7 +12,7 @@ type grpcHandler struct {
 	service OrdersService
 }
 
-func NewGRPCHandler(grpcServer *grpc.Server, service OrdersService) {
+func newGRPCHandler(grpcServer *grpc.Server, service OrdersService) {
 	handler := &grpcHandler{
 		service: service,
 	}

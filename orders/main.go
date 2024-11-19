@@ -1,18 +1,43 @@
-package orders
+package main
 
 import (
 	"common"
+	"common/discovery"
+	"common/discovery/consul"
 	"context"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"time"
 )
 
 var (
-	grpcAddr = common.EnvString("GRPC_ADDR", "localhost:2000")
+	serviceName = "orders"
+	grpcAddr    = common.EnvString("GRPC_ADDR", "localhost:2000")
+	consulAddr  = common.EnvString("CONSUL_ADDR", "localhost:8500")
 )
 
 func main() {
+	registry, err := consul.NewRegistry(consulAddr, serviceName)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx := context.Background()
+	instanceID := discovery.GenerateInstanceID(serviceName)
+	if err := registry.Register(ctx, instanceID, serviceName, grpcAddr); err != nil {
+		panic(err)
+	}
+
+	go func() {
+		for {
+			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
+				log.Fatal("Failed to health check")
+			}
+			time.Sleep(time.Second * 1)
+		}
+	}()
+
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
@@ -22,7 +47,7 @@ func main() {
 
 	store := NewStore()
 	svc := NewService(store)
-	NewGRPCHandler(grpcServer, svc)
+	newGRPCHandler(grpcServer, svc)
 
 	svc.CreateOrder(context.Background())
 

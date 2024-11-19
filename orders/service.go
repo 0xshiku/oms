@@ -1,4 +1,4 @@
-package orders
+package main
 
 import (
 	"common"
@@ -28,7 +28,15 @@ func (s *service) ValidateOrder(ctx context.Context, p *pb.CreateOrderRequest) e
 	log.Print(mergedItems)
 
 	// Validate with the stock service
-
+	//inStock, items, err := s.gateway.CheckIfItemIsInStock(ctx, p.CustomerID, mergedItems)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if !inStock {
+	//	return items, common.ErrNoStock
+	//}
+	//
+	//return items, nil
 	return nil
 }
 

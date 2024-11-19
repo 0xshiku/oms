@@ -1,20 +1,21 @@
-package gateway
+package main
 
 import (
 	"common"
 	pb "common/api"
 	"errors"
+	"gateway/gateway"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
 )
 
 type handler struct {
-	client pb.OrderServiceClient
+	gateway gateway.OrdersGateway
 }
 
-func NewHandler(client pb.OrderServiceClient) *handler {
-	return &handler{client}
+func NewHandler(gateway gateway.OrdersGateway) *handler {
+	return &handler{gateway}
 }
 
 func (h *handler) registerRoutes(mux *http.ServeMux) {
@@ -35,10 +36,8 @@ func (h *handler) HandleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o, err := h.client.CreateOrder(r.Context(), &pb.CreateOrderRequest{
-		CustomerID: customerID,
-		Items:      items,
-	})
+	o, err := h.gateway.CreateOrder(r.Context(), &pb.CreateOrderRequest{CustomerID: customerID, Items: items})
+
 	rStatus := status.Convert(err)
 	if rStatus != nil {
 		if rStatus.Code() != codes.InvalidArgument {

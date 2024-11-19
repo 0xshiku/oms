@@ -1,4 +1,4 @@
-package orders
+package main
 
 import (
 	pb "common/api"
