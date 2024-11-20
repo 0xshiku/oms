@@ -9,7 +9,10 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	stripeProcessor "payments/processor/stripe"
 	"time"
+
+	"github.com/stripe/stripe-go"
 )
 
 var (
@@ -20,6 +23,7 @@ var (
 	amqpPort    = common.EnvString("RABBITMQ_PORT", "5672")
 	grpcAddr    = common.EnvString("GRPC_ADDRESS", "localhost:2001")
 	consulAddr  = common.EnvString("CONSUL_ADDR", "localhost:8500")
+	stripeKey   = common.EnvString("STRIPE_KEY", "")
 )
 
 func main() {
@@ -46,6 +50,9 @@ func main() {
 	}()
 	defer registry.DeRegister(ctx, instanceID, serviceName)
 
+	// Stripe setup
+	stripe.Key = stripeKey
+
 	// Broker connection
 	ch, close := broker.Connect(amqpUser, amqpPass, amqpHost, amqpPort)
 	defer func() {
@@ -53,7 +60,9 @@ func main() {
 		ch.Close()
 	}()
 
-	svc := NewService()
+	processor := stripeProcessor.NewProcessor()
+	svc := NewService(processor)
+
 	amqpConsumer := NewConsumer(svc)
 	go amqpConsumer.Listen(ch)
 

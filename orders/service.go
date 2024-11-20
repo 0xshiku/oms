@@ -15,29 +15,41 @@ func NewService(store OrdersStore) *service {
 	return &service{store}
 }
 
-func (s *service) CreateOrder(ctx context.Context) error {
-	return nil
+func (s *service) CreateOrder(ctx context.Context, p *pb.CreateOrderRequest) (*pb.Order, error) {
+	items, err := s.ValidateOrder(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	o := &pb.Order{
+		ID:         "42",
+		CustomerID: p.CustomerID,
+		Status:     "pending",
+		Items:      items,
+	}
+
+	return o, nil
 }
 
-func (s *service) ValidateOrder(ctx context.Context, p *pb.CreateOrderRequest) error {
+func (s *service) ValidateOrder(ctx context.Context, p *pb.CreateOrderRequest) ([]*pb.Item, error) {
 	if len(p.Items) == 0 {
-		return common.ErrNoItems
+		return nil, common.ErrNoItems
 	}
 
 	mergedItems := mergeItemsQuantities(p.Items)
 	log.Print(mergedItems)
 
-	// Validate with the stock service
-	//inStock, items, err := s.gateway.CheckIfItemIsInStock(ctx, p.CustomerID, mergedItems)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if !inStock {
-	//	return items, common.ErrNoStock
-	//}
-	//
-	//return items, nil
-	return nil
+	// Temporary:
+	var itemsWithPrice []*pb.Item
+	for _, i := range mergedItems {
+		itemsWithPrice = append(itemsWithPrice, &pb.Item{
+			PriceID:  "asdasdpoi",
+			ID:       i.ID,
+			Quantity: i.Quantity,
+		})
+	}
+
+	return itemsWithPrice, nil
 }
 
 func mergeItemsQuantities(items []*pb.ItemsWithQuantity) []*pb.ItemsWithQuantity {

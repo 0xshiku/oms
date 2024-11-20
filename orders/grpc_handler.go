@@ -26,8 +26,9 @@ func newGRPCHandler(grpcServer *grpc.Server, service OrdersService, channel *amq
 
 func (h *grpcHandler) CreateOrder(ctx context.Context, orderRequest *pb.CreateOrderRequest) (*pb.Order, error) {
 	log.Printf("New order received! Order %v", orderRequest)
-	o := &pb.Order{
-		ID: "42",
+	o, err := h.service.CreateOrder(ctx, orderRequest)
+	if err != nil {
+		return nil, err
 	}
 
 	marshalledOrder, err := json.Marshal(o)
