@@ -53,6 +53,10 @@ func main() {
 		ch.Close()
 	}()
 
+	svc := NewService()
+	amqpConsumer := NewConsumer(svc)
+	go amqpConsumer.Listen(ch)
+
 	// gRPC server
 	grpcServer := grpc.NewServer()
 
