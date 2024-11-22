@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"net/http"
+	"payments/gateway"
 	stripeProcessor "payments/processor/stripe"
 	"time"
 
@@ -16,14 +18,16 @@ import (
 )
 
 var (
-	serviceName = "payment"
-	amqpUser    = common.EnvString("RABBITMQ_USER", "guest")
-	amqpPass    = common.EnvString("RABBITMQ_PASS", "guest")
-	amqpHost    = common.EnvString("RABBITMQ_HOST", "localhost")
-	amqpPort    = common.EnvString("RABBITMQ_PORT", "5672")
-	grpcAddr    = common.EnvString("GRPC_ADDRESS", "localhost:2001")
-	consulAddr  = common.EnvString("CONSUL_ADDR", "localhost:8500")
-	stripeKey   = common.EnvString("STRIPE_KEY", "")
+	serviceName          = "payment"
+	amqpUser             = common.EnvString("RABBITMQ_USER", "guest")
+	amqpPass             = common.EnvString("RABBITMQ_PASS", "guest")
+	amqpHost             = common.EnvString("RABBITMQ_HOST", "localhost")
+	amqpPort             = common.EnvString("RABBITMQ_PORT", "5672")
+	grpcAddr             = common.EnvString("GRPC_ADDRESS", "localhost:2001")
+	consulAddr           = common.EnvString("CONSUL_ADDR", "localhost:8500")
+	stripeKey            = common.EnvString("STRIPE_KEY", "")
+	httpAddr             = common.EnvString("HTTP_ADDR", "localhost:8081")
+	endpointStripeSecret = common.EnvString("STRIPE_ENDPOINT_SECRET", "whsec_...")
 )
 
 func main() {
@@ -61,10 +65,24 @@ func main() {
 	}()
 
 	processor := stripeProcessor.NewProcessor()
-	svc := NewService(processor)
+	gateway := gateway.NewGRPCGateway(registry)
+	svc := NewService(processor, gateway)
 
 	amqpConsumer := NewConsumer(svc)
 	go amqpConsumer.Listen(ch)
+
+	// HTTP server
+	mux := http.NewServeMux()
+
+	httpServer := NewPaymentHTTPHandler(ch)
+	httpServer.registerRoutes(mux)
+
+	go func() {
+		log.Printf("Starting HTTP server at %s", httpAddr)
+		if err := http.ListenAndServe(httpAddr, mux); err != nil {
+			log.Fatal("failed to start http server")
+		}
+	}()
 
 	// gRPC server
 	grpcServer := grpc.NewServer()
