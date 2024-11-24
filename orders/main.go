@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"orders/gateway"
 	"time"
 )
 
@@ -69,8 +70,10 @@ func main() {
 	}
 	defer l.Close()
 
+	gateway := gateway.NewGateway(registry)
+
 	store := NewStore()
-	svc := NewService(store)
+	svc := NewService(store, gateway)
 	// Decorator Pattern
 	// Note: NewTelemetryMiddleware needs to implement the same interface as svc
 	// New Telemetry middleware just adds the telemetry functionality on the service

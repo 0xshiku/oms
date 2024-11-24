@@ -5,14 +5,16 @@ import (
 	pb "common/api"
 	"context"
 	"log"
+	"orders/gateway"
 )
 
 type service struct {
-	store OrdersStore
+	store   OrdersStore
+	gateway gateway.StockGateway
 }
 
-func NewService(store OrdersStore) *service {
-	return &service{store}
+func NewService(store OrdersStore, gateway gateway.StockGateway) *service {
+	return &service{store, gateway}
 }
 
 func (s *service) GetOrder(ctx context.Context, p *pb.GetOrderRequest) (*pb.Order, error) {
@@ -48,17 +50,16 @@ func (s *service) ValidateOrder(ctx context.Context, p *pb.CreateOrderRequest) (
 	mergedItems := mergeItemsQuantities(p.Items)
 	log.Print(mergedItems)
 
-	// Temporary:
-	var itemsWithPrice []*pb.Item
-	for _, i := range mergedItems {
-		itemsWithPrice = append(itemsWithPrice, &pb.Item{
-			PriceID:  "asdasdpoi",
-			ID:       i.ID,
-			Quantity: i.Quantity,
-		})
+	// Validate with the stock service (contact gateway because we are going to contact another service)
+	inStock, items, err := s.gateway.CheckIfItemIsInStock(ctx, p.CustomerID, mergedItems)
+	if err != nil {
+		return nil, err
+	}
+	if !inStock {
+		return items, common.ErrNoStock
 	}
 
-	return itemsWithPrice, nil
+	return items, nil
 }
 
 func (s *service) UpdateOrder(ctx context.Context, o *pb.Order) (*pb.Order, error) {
