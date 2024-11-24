@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"gateway/gateway"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
@@ -38,12 +39,16 @@ func (h *handler) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tr := otel.Tracer("http")
+	ctx, span := tr.Start(r.Context(), fmt.Sprintf("%s %s", r.Method, r.RequestURI))
+	defer span.End()
+
 	if err := validateItems(items); err != nil {
 		common.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	o, err := h.gateway.CreateOrder(r.Context(), &pb.CreateOrderRequest{CustomerID: customerID, Items: items})
+	o, err := h.gateway.CreateOrder(ctx, &pb.CreateOrderRequest{CustomerID: customerID, Items: items})
 
 	rStatus := status.Convert(err)
 	if rStatus != nil {
@@ -61,7 +66,11 @@ func (h *handler) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	customerID := r.PathValue("customerID")
 	orderID := r.PathValue("orderID")
 
-	o, err := h.gateway.GetOrder(r.Context(), orderID, customerID)
+	tr := otel.Tracer("http")
+	ctx, span := tr.Start(r.Context(), fmt.Sprintf("%s %s", r.Method, r.RequestURI))
+	defer span.End()
+
+	o, err := h.gateway.GetOrder(ctx, orderID, customerID)
 	rStatus := status.Convert(err)
 	if rStatus != nil {
 		if rStatus.Code() != codes.InvalidArgument {

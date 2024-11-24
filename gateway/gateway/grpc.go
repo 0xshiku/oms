@@ -29,7 +29,7 @@ func (g *Gateway) CreateOrder(ctx context.Context, p *pb.CreateOrderRequest) (*p
 	})
 }
 
-func (g *Gateway) GetOrder(ctx context.Context, orderID, customerID string) (*pb.Order, Gateway) {
+func (g *Gateway) GetOrder(ctx context.Context, orderID, customerID string) (*pb.Order, error) {
 	conn, err := discovery.ServiceConnection(ctx, "orders", g.registry)
 	if err != nil {
 		log.Fatalf("Failed to dial server: %v", err)

@@ -20,9 +20,14 @@ var (
 	amqpPass    = common.EnvString("RABBITMQ_PASS", "guest")
 	amqpHost    = common.EnvString("RABBITMQ_HOST", "localhost")
 	amqpPort    = common.EnvString("RABBITMQ_PORT", "5672")
+	jaegerAddr  = common.EnvString("JAEGER_PORT", "localhost:4318")
 )
 
 func main() {
+	if err := common.SetGlobalTracer(context.TODO(), serviceName, jaegerAddr); err != nil {
+		log.Fatal("Failed to set global tracer")
+	}
+
 	registry, err := consul.NewRegistry(consulAddr, serviceName)
 	if err != nil {
 		panic(err)
@@ -54,15 +59,13 @@ func main() {
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to listen: %v", err)
 	}
 	defer l.Close()
 
 	store := NewStore()
 	svc := NewService(store)
 	newGRPCHandler(grpcServer, svc, ch)
-
-	svc.CreateOrder(context.Background())
 
 	log.Println("GRPC Server started at ", grpcAddr)
 

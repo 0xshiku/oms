@@ -28,9 +28,14 @@ var (
 	stripeKey            = common.EnvString("STRIPE_KEY", "")
 	httpAddr             = common.EnvString("HTTP_ADDR", "localhost:8081")
 	endpointStripeSecret = common.EnvString("STRIPE_ENDPOINT_SECRET", "whsec_...")
+	jaegerAddr           = common.EnvString("JAEGER_ADDR", "localhost:4318")
 )
 
 func main() {
+	if err := common.SetGlobalTracer(context.TODO(), serviceName, jaegerAddr); err != nil {
+		log.Fatal("Failed to set global tracer")
+	}
+
 	// Register consul
 	registry, err := consul.NewRegistry(consulAddr, serviceName)
 	if err != nil {
