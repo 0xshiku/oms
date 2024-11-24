@@ -6,6 +6,7 @@ import (
 	"common/discovery"
 	"common/discovery/consul"
 	"context"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -24,8 +25,13 @@ var (
 )
 
 func main() {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	zap.ReplaceGlobals(logger)
+
 	if err := common.SetGlobalTracer(context.TODO(), serviceName, jaegerAddr); err != nil {
-		log.Fatal("Failed to set global tracer")
+		logger.Fatal("Could not set global tracer", zap.Error(err))
 	}
 
 	registry, err := consul.NewRegistry(consulAddr, serviceName)
@@ -42,7 +48,7 @@ func main() {
 	go func() {
 		for {
 			if err := registry.HealthCheck(instanceID, serviceName); err != nil {
-				log.Fatal("Failed to health check")
+				logger.Error("Failed to health check", zap.Error(err))
 			}
 			time.Sleep(time.Second * 1)
 		}
@@ -59,7 +65,7 @@ func main() {
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		logger.Fatal("Failed to lister", zap.Error(err))
 	}
 	defer l.Close()
 
@@ -71,13 +77,14 @@ func main() {
 	// Notice that each method on svcWithTelemetry just returns the svc method with .next
 	// Before the return we add a new functionality
 	svcWithTelemetry := NewTelemetryMiddleware(svc)
+	svcWithLogging := NewLoggingMiddleware(svcWithTelemetry)
 
-	newGRPCHandler(grpcServer, svcWithTelemetry, ch)
+	newGRPCHandler(grpcServer, svcWithLogging, ch)
 
-	consumer := NewConsumer(svcWithTelemetry)
+	consumer := NewConsumer(svcWithLogging)
 	go consumer.Listen(ch)
 
-	log.Println("GRPC Server started at ", grpcAddr)
+	logger.Info("Starting HTTP server", zap.String("port", grpcAddr))
 
 	if err := grpcServer.Serve(l); err != nil {
 		log.Fatal(err.Error())
