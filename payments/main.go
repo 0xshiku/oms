@@ -72,8 +72,9 @@ func main() {
 	processor := stripeProcessor.NewProcessor()
 	gateway := gateway.NewGRPCGateway(registry)
 	svc := NewService(processor, gateway)
+	svcWithTelemetry := NewTelemetryMiddleware(svc)
 
-	amqpConsumer := NewConsumer(svc)
+	amqpConsumer := NewConsumer(svcWithTelemetry)
 	go amqpConsumer.Listen(ch)
 
 	// HTTP server

@@ -60,7 +60,7 @@ func main() {
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
-
+	}
 	defer l.Close()
 
 	store := NewStore()

@@ -5,7 +5,9 @@ import (
 	"common/broker"
 	"context"
 	"encoding/json"
+	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel"
 	"log"
 )
 
@@ -32,6 +34,11 @@ func (c *consumer) Listen(ch *amqp.Channel) {
 
 	go func() {
 		for d := range msgs {
+			// Extract the headers
+			ctx := broker.ExtractAMQPHeader(context.Background(), d.Headers)
+
+			tr := otel.Tracer("amqp")
+			_, messageSpan := tr.Start(ctx, fmt.Sprintf("AMQP - consume"))
 			log.Printf("Received message: %s", d.Body)
 
 			o := &pb.Order{}
@@ -53,6 +60,9 @@ func (c *consumer) Listen(ch *amqp.Channel) {
 
 				continue
 			}
+
+			messageSpan.AddEvent(fmt.Sprintf("payment.created: %s", paymentLink))
+			messageSpan.End()
 
 			log.Printf("Payment link created: %s", paymentLink)
 			d.Ack(false)
