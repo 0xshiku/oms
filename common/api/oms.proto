@@ -18,6 +18,11 @@ service OrderService {
   rpc UpdateOrder(Order) returns (Order);
 }
 
+service StockService {
+  rpc CheckIfItemIsInStock(CheckIfItemIsInStockRequest) returns (CheckIfItemIsInStockResponse);
+  rpc GetItems(GetItemsRequest) returns (GetItemsResponse);
+}
+
 message Item {
   string ID = 1;
   string Name = 2;
@@ -38,4 +43,21 @@ message CreateOrderRequest {
 message GetOrderRequest {
   string OrderID = 1;
   string CustomerID = 2;
+}
+
+message CheckIfItemIsInStockRequest {
+  repeated ItemsWithQuantity Items = 1;
+}
+
+message CheckIfItemIsInStockResponse {
+  bool InStock = 1;
+  repeated Item Items = 2;
+}
+
+message GetItemsRequest {
+  repeated string ItemIDs = 1;
+}
+
+message GetItemsResponse {
+  repeated Item Items = 1;
 }
