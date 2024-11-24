@@ -23,7 +23,7 @@ func (s *TelemetryMiddleware) GetItems(ctx context.Context, ids []string) ([]*pb
 	return s.next.GetItems(ctx, ids)
 }
 
-func (s *TelemetryMiddleware) CheckIfItemAreInStock(ctx context.Context, p []*pb.ItemsWithQuantity) (bool, []*pb.Item, error) {
+func (s *TelemetryMiddleware) CheckIfItemsAreInStock(ctx context.Context, p []*pb.ItemsWithQuantity) (bool, []*pb.Item, error) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(fmt.Sprintf("CheckIfItemAreInStock: %v", p))
 
