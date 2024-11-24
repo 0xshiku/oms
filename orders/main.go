@@ -60,12 +60,22 @@ func main() {
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
-	}
+
 	defer l.Close()
 
 	store := NewStore()
 	svc := NewService(store)
-	newGRPCHandler(grpcServer, svc, ch)
+	// Decorator Pattern
+	// Note: NewTelemetryMiddleware needs to implement the same interface as svc
+	// New Telemetry middleware just adds the telemetry functionality on the service
+	// Notice that each method on svcWithTelemetry just returns the svc method with .next
+	// Before the return we add a new functionality
+	svcWithTelemetry := NewTelemetryMiddleware(svc)
+
+	newGRPCHandler(grpcServer, svcWithTelemetry, ch)
+
+	consumer := NewConsumer(svcWithTelemetry)
+	go consumer.Listen(ch)
 
 	log.Println("GRPC Server started at ", grpcAddr)
 

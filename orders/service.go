@@ -37,7 +37,7 @@ func (s *service) CreateOrder(ctx context.Context, p *pb.CreateOrderRequest, ite
 		Items:      items,
 	}
 
-	return nil
+	return o, nil
 }
 
 func (s *service) ValidateOrder(ctx context.Context, p *pb.CreateOrderRequest) ([]*pb.Item, error) {
