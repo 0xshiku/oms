@@ -4,19 +4,29 @@ import (
 	pb "common/api"
 	"context"
 	"errors"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+)
+
+const (
+	dbName   = "orders"
+	CollName = "orders"
 )
 
 var orders = make([]*pb.Order, 0)
 
 type store struct {
-	// TODO: add mongodb instance
+	db *mongo.Client
 }
 
-func NewStore() *store {
-	return &store{}
+func NewStore(db *mongo.Client) *store {
+	return &store{db}
 }
 
 func (s *store) Create(ctx context.Context, p *pb.CreateOrderRequest, items []*pb.Item) (string, error) {
+	col := s.db.Database(dbName).Collection(CollName)
+
+	col.InsertOne(ctx)
+
 	id := "42"
 	orders = append(orders, &pb.Order{
 		ID:          id,

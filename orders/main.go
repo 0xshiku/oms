@@ -6,6 +6,10 @@ import (
 	"common/discovery"
 	"common/discovery/consul"
 	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"log"
@@ -23,6 +27,9 @@ var (
 	amqpHost    = common.EnvString("RABBITMQ_HOST", "localhost")
 	amqpPort    = common.EnvString("RABBITMQ_PORT", "5672")
 	jaegerAddr  = common.EnvString("JAEGER_PORT", "localhost:4318")
+	mongoUser   = common.EnvString("MONGO_DB_USER", "root")
+	mongoPass   = common.EnvString("MONGO_DB_PASS", "example")
+	mongoAddr   = common.EnvString("MONGO_DB_HOST", "localhost:27017")
 )
 
 func main() {
@@ -63,6 +70,13 @@ func main() {
 		ch.Close()
 	}()
 
+	// MongoDB connection
+	uri := fmt.Sprintf("mongodb://%s:%s@%s", mongoUser, mongoPass, mongoAddr)
+	mongoClient, err := connectToMongoDB(uri)
+	if err != nil {
+		logger.Fatal("Failed to connect to mongo db", zap.Error(err))
+	}
+
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
@@ -72,8 +86,9 @@ func main() {
 
 	gateway := gateway.NewGateway(registry)
 
-	store := NewStore()
+	store := NewStore(mongoClient)
 	svc := NewService(store, gateway)
+
 	// Decorator Pattern
 	// Note: NewTelemetryMiddleware needs to implement the same interface as svc
 	// New Telemetry middleware just adds the telemetry functionality on the service
@@ -92,4 +107,18 @@ func main() {
 	if err := grpcServer.Serve(l); err != nil {
 		log.Fatal(err.Error())
 	}
+}
+
+func connectToMongoDB(uri string) (*mongo.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(options.Client().ApplyURI(uri))
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.Ping(ctx, readpref.Primary())
+
+	return client, err
 }

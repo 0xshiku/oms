@@ -3,6 +3,7 @@ package main
 import (
 	pb "common/api"
 	"context"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type OrdersService interface {
@@ -16,4 +17,8 @@ type OrdersStore interface {
 	Create(context.Context, *pb.CreateOrderRequest, []*pb.Item) (string, error)
 	Get(ctx context.Context, id, customerID string) (*pb.Order, error)
 	Update(context.Context, string, *pb.Order) error
+}
+
+type Order struct {
+	ID primitive.ObjectID `bson:"_id, omitempty"`
 }
