@@ -90,10 +90,7 @@ func main() {
 	svc := NewService(store, gateway)
 
 	// Decorator Pattern
-	// Note: NewTelemetryMiddleware needs to implement the same interface as svc
-	// New Telemetry middleware just adds the telemetry functionality on the service
-	// Notice that each method on svcWithTelemetry just returns the svc method with .next
-	// Before the return we add a new functionality
+	// Inserts new functionality to svc
 	svcWithTelemetry := NewTelemetryMiddleware(svc)
 	svcWithLogging := NewLoggingMiddleware(svcWithTelemetry)
 
